@@ -1,0 +1,16 @@
+# Environment variables — NEVER commit this
+.env
+
+# Python
+venv/
+__pycache__/
+*.pyc
+*.pyo
+.Python
+
+# macOS
+.DS_Store
+
+# Editor
+.vscode/
+.idea/
