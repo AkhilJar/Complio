@@ -5,7 +5,7 @@ import "./App.css"
 
 // The base URL of our Flask backend.
 // We keep it in one place so if the port changes we only update it here.
-const API = "http://localhost:5000"
+const API = "http://localhost:5001"
 
 export default function App() {
   // null   = still loading (we haven't checked the DB yet)

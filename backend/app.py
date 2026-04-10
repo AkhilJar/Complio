@@ -282,4 +282,4 @@ Employees:      {business['employee_count']}"""
 if __name__ == "__main__":
     # FLASK_DEBUG=1 in .env enables auto-reload on file save and detailed errors.
     # Never run debug=True in production — it exposes an interactive debugger.
-    app.run(debug=os.getenv("FLASK_DEBUG", "0") == "1", port=5000)
+    app.run(debug=os.getenv("FLASK_DEBUG", "0") == "1", port=5001)
