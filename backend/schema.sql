@@ -15,7 +15,7 @@ CREATE TABLE IF NOT EXISTS businesses (
   state         TEXT NOT NULL,
   business_type TEXT NOT NULL,
   employee_count INTEGER NOT NULL,
-  created_at    TIMESTAMPTZ DEFAULT NOW()
+  created_at    TIMESTAMPTZ DEFAULT NOW() -- means use current time
 );
 
 -- One row per chat message (both user messages and AI replies).
