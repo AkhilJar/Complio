@@ -1,0 +1,27 @@
+name: CI
+
+#run on every push and PR
+on: [push, pull_request]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      #pull the repo onto the runner
+      - uses: actions/checkout@v4
+
+      #build the backend image
+      - name: Build image
+        run: docker build -t complio-api ./backend
+
+      #start the container in the background
+      - name: Run container
+        run: docker run -d -p 8000:8000 complio-api
+
+      #give uvicorn a second to boot
+      - name: Wait for startup
+        run: sleep 3
+
+      #fail the build if /health doesn't return 200
+      - name: Health check
+        run: curl --fail localhost:8000/health
