@@ -15,8 +15,8 @@ when new bill changes affect their compliance documents.
 
 - Run full stack: `docker compose up`
 - Stop: `docker compose down` (add `-v` to also wipe the database)
-- Test: `docker compose run --rm api pytest`
 - Never run bare `python3` — always through compose
+- Test: `docker compose run --rm api pytest` (once pytest is added)
 
 ## Migrations (Alembic, always via compose)
 
@@ -28,7 +28,9 @@ when new bill changes affect their compliance documents.
 
 - Runs in the `db` compose service, data persists in the `pgdata` volume
 - Inside compose, reach it at host `db:5432`; from the Mac (TablePlus), `127.0.0.1:5432`
-- Credentials in `.env` (gitignored); `.env.example` is the template
+- Credentials live in `.env` at repo root, injected by compose as environment variables
+- `config.py` reads them from the environment, not from a file inside the container
+- `.env` is gitignored; `.env.example` is the template
 
 ## Conventions
 
