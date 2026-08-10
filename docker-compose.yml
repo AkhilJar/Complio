@@ -1,6 +1,11 @@
 services:
   db:
-    image: postgres:16
+    #pgvector's own image, which is postgres 16 plus the vector extension —
+    #same major version, so the existing pgdata volume is reused untouched.
+    #the -trixie tag matches the glibc the data was created under; the default
+    #tag is a debian release behind, and the collation mismatch that causes
+    #puts every text index at risk of sorting differently than it was built
+    image: pgvector/pgvector:pg16-trixie
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}

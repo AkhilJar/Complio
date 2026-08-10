@@ -1,6 +1,7 @@
 import uuid
 
-from sqlalchemy import DateTime, ForeignKey, Text, UniqueConstraint
+from pgvector.sqlalchemy import Vector
+from sqlalchemy import DateTime, ForeignKey, Integer, Text, UniqueConstraint
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
@@ -25,6 +26,8 @@ class Bill(Base):
     fetched_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
 
     text = relationship("BillText", back_populates="bill", uselist=False)
+    #one bill, many chunks — the reverse of BillChunk.bill
+    chunks = relationship("BillChunk", back_populates="bill")
 
 
 class BillText(Base):
@@ -51,6 +54,34 @@ class BillText(Base):
     #the one-text-per-bill rule, enforced in the database rather than in code
     #so the upsert has something to conflict on
     __table_args__ = (UniqueConstraint("bill_id", name="uq_bill_texts_bill_id"),)
+
+
+class BillChunk(Base):
+    """A slice of a bill's text, sized for embedding and retrieval.
+
+    Chunking and embedding both come later — this table exists so the schema
+    and its index are settled before either lands.
+    """
+
+    __tablename__ = "bill_chunks"
+
+    chunk_id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    bill_id = Column(Text, ForeignKey("bills.bill_id"), nullable=False)
+    #position within the bill, so retrieved chunks can be put back in order
+    chunk_index = Column(Integer, nullable=False)
+    chunk_text = Column(Text, nullable=False)
+    #1536 dimensions matches the openai text-embedding-3-small output.
+    #nullable because rows land here before anything embeds them
+    embedding = Column(Vector(1536), nullable=True)
+    created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+
+    bill = relationship("Bill", back_populates="chunks")
+
+    #re-chunking a bill should overwrite position by position rather than
+    #accumulate a second copy of the same bill
+    __table_args__ = (
+        UniqueConstraint("bill_id", "chunk_index", name="uq_bill_chunks_bill_id_index"),
+    )
 
 
 class UserDocument(Base):
