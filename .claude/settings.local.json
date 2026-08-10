@@ -9,7 +9,13 @@
       "Bash(npm create:*)",
       "Bash(npm install:*)",
       "Bash(git push:*)",
-      "Bash(curl:*)"
+      "Bash(curl:*)",
+      "Bash(git checkout *)",
+      "Bash(sed 's/\\\\$$//')",
+      "Bash(docker compose *)",
+      "Bash(echo \"EXIT=$?\")",
+      "Bash(git stash *)",
+      "Bash(python3 -c \"import json,sys; print\\(list\\(json.load\\(sys.stdin\\)['paths'].keys\\(\\)\\)\\)\")"
     ]
   }
 }
