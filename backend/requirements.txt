@@ -7,3 +7,5 @@ alembic==1.14.0
 #s3 client — minio is s3-compatible, so the same code works against real s3 later
 boto3==1.35.54
 pytest==8.3.3
+#html-to-text for bill text extraction
+beautifulsoup4==4.12.3
