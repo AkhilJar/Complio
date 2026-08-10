@@ -51,3 +51,32 @@ class BillText(Base):
     #the one-text-per-bill rule, enforced in the database rather than in code
     #so the upsert has something to conflict on
     __table_args__ = (UniqueConstraint("bill_id", name="uq_bill_texts_bill_id"),)
+
+
+class UserDocument(Base):
+    """A compliance document uploaded by the user.
+
+    Single implicit user for now, so there is deliberately no owner column —
+    a profile link comes in a later task.
+
+    The pdf itself lives in minio and only its key is stored here; postgres
+    holds the extracted markdown, which is what a later embedding step reads.
+    """
+
+    __tablename__ = "user_documents"
+
+    document_id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    filename = Column(Text, nullable=False)
+    #where the original pdf landed in object storage
+    minio_key = Column(Text, nullable=False)
+    markdown_content = Column(Text, nullable=False)
+    #sha256 of the original pdf bytes, not of the markdown, so the same file
+    #is recognised even if the extraction library later changes its output
+    content_hash = Column(Text, nullable=False)
+    uploaded_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+
+    #uploading the same file twice returns the existing row instead of
+    #duplicating it; the database is what makes that guarantee, not the route
+    __table_args__ = (
+        UniqueConstraint("content_hash", name="uq_user_documents_content_hash"),
+    )

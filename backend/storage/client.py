@@ -33,6 +33,23 @@ def upload_file(local_path: str, key: str, bucket: str = None) -> str:
     return key
 
 
+#upload_file goes through the filesystem; uploads that start life in memory
+#(an api request body) must never be spilled to disk just to be re-read
+def upload_bytes(data: bytes, key: str, content_type: str = None,
+                 bucket: str = None) -> str:
+    bucket = bucket or settings.minio_bucket
+    extra = {"ContentType": content_type} if content_type else {}
+    s3.put_object(Bucket=bucket, Key=key, Body=data, **extra)
+    return key
+
+
+#needed to roll back an upload when a later step fails, so a rejected
+#request never leaves an object behind with no row pointing at it
+def delete_object(key: str, bucket: str = None) -> None:
+    bucket = bucket or settings.minio_bucket
+    s3.delete_object(Bucket=bucket, Key=key)
+
+
 def download_file(key: str, local_path: str, bucket: str = None) -> str:
     bucket = bucket or settings.minio_bucket
     s3.download_file(bucket, key, local_path)

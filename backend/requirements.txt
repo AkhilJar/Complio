@@ -9,3 +9,5 @@ boto3==1.35.54
 pytest==8.3.3
 #html-to-text for bill text extraction
 beautifulsoup4==4.12.3
+#mechanical pdf-to-markdown extraction for uploaded documents — no model call
+pymupdf4llm==0.0.17
