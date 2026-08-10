@@ -17,6 +17,27 @@ services:
       interval: 5s
       retries: 5
 
+  minio:
+    image: minio/minio
+    #server needs an explicit console address, otherwise it picks a random port
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+    ports:
+      #9000 is the s3 api, 9001 is the browser console
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      #named volume so uploaded objects survive `docker compose down`
+      - miniodata:/data
+    healthcheck:
+      #mc ships inside the image and exits non-zero until the s3 api accepts
+      #calls, so the api never starts against a half-booted minio
+      test: ["CMD-SHELL", "mc ready local"]
+      interval: 5s
+      retries: 5
+
   api:
       build: ./backend
       ports:
@@ -27,9 +48,18 @@ services:
         - ./backend:/app
       environment:
         DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/complio
+        #service name, not localhost — the api reaches minio over the compose network
+        MINIO_ENDPOINT: http://minio:9000
+        #the root credentials double as s3 access/secret keys
+        MINIO_ACCESS_KEY: ${MINIO_ROOT_USER}
+        MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD}
+        MINIO_BUCKET: complio-documents
       depends_on:
         db:
+          condition: service_healthy
+        minio:
           condition: service_healthy
 
 volumes:
   pgdata:
+  miniodata:
