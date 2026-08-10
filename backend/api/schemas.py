@@ -11,6 +11,22 @@ class DocumentCreate(BaseModel):
     content: str
 
 
+class BillChunkRead(BaseModel):
+    """A bill chunk as returned by the api.
+
+    The embedding is deliberately absent: 1536 floats mean nothing to a
+    client and would dwarf the text they belong to.
+    """
+
+    model_config = ConfigDict(from_attributes=True)
+
+    chunk_id: UUID
+    bill_id: str
+    chunk_index: int
+    chunk_text: str
+    created_at: datetime
+
+
 class DocumentRead(BaseModel):
     """What the api gives back for a stored document.
 

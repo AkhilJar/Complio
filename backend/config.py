@@ -4,6 +4,10 @@ from pydantic_settings import BaseSettings
 #reads settings from environment variables (set by compose)
 class Settings(BaseSettings):
     database_url: str
+    #tests run against their own database so a test run can never touch dev
+    #data. empty means "same server as database_url, but the complio_test
+    #database", which is what conftest derives
+    test_database_url: str = ""
     #object storage — points at the minio container now, at s3/r2 after deploy
     minio_endpoint: str
     minio_access_key: str
