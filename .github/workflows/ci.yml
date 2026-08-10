@@ -6,26 +6,71 @@ on: [push, pull_request]
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
+
+    services:
+      #must stay byte-identical to the db image in docker-compose.yml. the
+      #tag is glibc-sensitive: a mismatch between local and ci means text
+      #indexes get built under one collation and read under another
+      db:
+        image: pgvector/pgvector:pg16-trixie
+        env:
+          POSTGRES_USER: ci
+          POSTGRES_PASSWORD: ci
+          POSTGRES_DB: complio
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U ci"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      #the app refuses to boot without these, and the tests need them to
+      #reach the service containers on the runner
+      DATABASE_URL: postgresql://ci:ci@localhost:5432/complio
+      MINIO_ENDPOINT: http://localhost:9000
+      MINIO_ACCESS_KEY: ci-minio
+      MINIO_SECRET_KEY: ci-minio-secret
+      MINIO_BUCKET: ci-bucket
+
     steps:
       #pull the repo onto the runner
       - uses: actions/checkout@v5
+
+      #a drifting db image is the failure this guards against, and it is
+      #cheap to catch here rather than through a confusing index bug later
+      - name: Assert db image matches docker-compose.yml
+        run: |
+          grep -q 'image: pgvector/pgvector:pg16-trixie' docker-compose.yml \
+            || { echo "db image in docker-compose.yml does not match this workflow"; exit 1; }
 
       #build the backend image
       - name: Build image
         run: docker build -t complio-api ./backend
 
-      #start the container in the background. the settings in config.py are
-      #required, so the app refuses to boot without them — these are throwaway
-      #values that only satisfy validation. /health touches neither postgres
-      #nor minio, so nothing has to be reachable for the smoke test
+      #minio cannot run as a service container because those cannot pass a
+      #command, and the image needs 'server /data'
+      - name: Start MinIO
+        run: |
+          docker run -d --name minio -p 9000:9000 \
+            -e MINIO_ROOT_USER=${{ env.MINIO_ACCESS_KEY }} \
+            -e MINIO_ROOT_PASSWORD=${{ env.MINIO_SECRET_KEY }} \
+            minio/minio server /data
+          for _ in $(seq 1 30); do
+            curl -sf http://localhost:9000/minio/health/live && break
+            sleep 2
+          done
+
+      #start the container in the background for the smoke test
       - name: Run container
         run: |
-          docker run -d -p 8000:8000 \
-            -e DATABASE_URL=postgresql://ci:ci@localhost:5432/ci \
-            -e MINIO_ENDPOINT=http://localhost:9000 \
-            -e MINIO_ACCESS_KEY=ci \
-            -e MINIO_SECRET_KEY=ci-secret \
-            -e MINIO_BUCKET=ci-bucket \
+          docker run -d --network host \
+            -e DATABASE_URL="$DATABASE_URL" \
+            -e MINIO_ENDPOINT="$MINIO_ENDPOINT" \
+            -e MINIO_ACCESS_KEY="$MINIO_ACCESS_KEY" \
+            -e MINIO_SECRET_KEY="$MINIO_SECRET_KEY" \
+            -e MINIO_BUCKET="$MINIO_BUCKET" \
             complio-api
 
       #give uvicorn a second to boot
@@ -35,3 +80,26 @@ jobs:
       #fail the build if /health doesn't return 200
       - name: Health check
         run: curl --fail localhost:8000/health
+
+      #the migrations are what the tests build their schema from, so running
+      #them here proves they apply cleanly to an empty database
+      - name: Apply migrations
+        run: |
+          docker run --rm --network host \
+            -e DATABASE_URL="$DATABASE_URL" \
+            -e MINIO_ENDPOINT="$MINIO_ENDPOINT" \
+            -e MINIO_ACCESS_KEY="$MINIO_ACCESS_KEY" \
+            -e MINIO_SECRET_KEY="$MINIO_SECRET_KEY" \
+            -e MINIO_BUCKET="$MINIO_BUCKET" \
+            complio-api alembic upgrade head
+
+      #any failing test fails the build
+      - name: Run tests
+        run: |
+          docker run --rm --network host \
+            -e DATABASE_URL="$DATABASE_URL" \
+            -e MINIO_ENDPOINT="$MINIO_ENDPOINT" \
+            -e MINIO_ACCESS_KEY="$MINIO_ACCESS_KEY" \
+            -e MINIO_SECRET_KEY="$MINIO_SECRET_KEY" \
+            -e MINIO_BUCKET="$MINIO_BUCKET" \
+            complio-api pytest -v
