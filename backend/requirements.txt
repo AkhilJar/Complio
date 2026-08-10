@@ -4,3 +4,6 @@ sqlalchemy==2.0.36
 psycopg2-binary==2.9.10
 pydantic-settings==2.6.1
 alembic==1.14.0
+#s3 client — minio is s3-compatible, so the same code works against real s3 later
+boto3==1.35.54
+pytest==8.3.3
