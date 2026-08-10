@@ -14,9 +14,19 @@ jobs:
       - name: Build image
         run: docker build -t complio-api ./backend
 
-      #start the container in the background
+      #start the container in the background. the settings in config.py are
+      #required, so the app refuses to boot without them — these are throwaway
+      #values that only satisfy validation. /health touches neither postgres
+      #nor minio, so nothing has to be reachable for the smoke test
       - name: Run container
-        run: docker run -d -p 8000:8000 complio-api
+        run: |
+          docker run -d -p 8000:8000 \
+            -e DATABASE_URL=postgresql://ci:ci@localhost:5432/ci \
+            -e MINIO_ENDPOINT=http://localhost:9000 \
+            -e MINIO_ACCESS_KEY=ci \
+            -e MINIO_SECRET_KEY=ci-secret \
+            -e MINIO_BUCKET=ci-bucket \
+            complio-api
 
       #give uvicorn a second to boot
       - name: Wait for startup
