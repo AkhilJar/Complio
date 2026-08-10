@@ -9,6 +9,14 @@ class Settings(BaseSettings):
     minio_access_key: str
     minio_secret_key: str
     minio_bucket: str
+    #texas legislature ftp — defaults live here rather than in .env because
+    #they are public, non-secret, and the same for every developer
+    tx_ftp_host: str = "ftp.legis.state.tx.us"
+    tx_ftp_timeout: int = 30
+    #seconds between ftp requests, to stay a polite guest on a public server
+    tx_ftp_delay: float = 1.0
+    #89th regular session; lowercase works, the server is case-insensitive
+    tx_session: str = "89r"
 
 
 settings = Settings()
