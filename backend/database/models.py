@@ -54,24 +54,26 @@ class BillText(Base):
 
 
 class UserDocument(Base):
-    """A compliance document uploaded by the user.
+    """A compliance document submitted by the user.
 
     Single implicit user for now, so there is deliberately no owner column —
     a profile link comes in a later task.
 
-    The pdf itself lives in minio and only its key is stored here; postgres
-    holds the extracted markdown, which is what a later embedding step reads.
+    Documents arrive as text and are stored whole in postgres, which is what
+    a later embedding step reads.
     """
 
     __tablename__ = "user_documents"
 
     document_id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     filename = Column(Text, nullable=False)
-    #where the original pdf landed in object storage
-    minio_key = Column(Text, nullable=False)
+    #nullable: documents arrive as text and live entirely in postgres now.
+    #the column stays for when file uploads return and an original needs a
+    #home in object storage again
+    minio_key = Column(Text)
     markdown_content = Column(Text, nullable=False)
-    #sha256 of the original pdf bytes, not of the markdown, so the same file
-    #is recognised even if the extraction library later changes its output
+    #sha256 of the content bytes, which is what makes re-submitting the same
+    #document return the existing row instead of duplicating it
     content_hash = Column(Text, nullable=False)
     uploaded_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
 

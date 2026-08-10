@@ -1,14 +1,20 @@
 from datetime import datetime
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
+
+
+class DocumentCreate(BaseModel):
+    """A document submitted as text — no file, no upload."""
+
+    filename: str = Field(min_length=1, max_length=255)
+    content: str
 
 
 class DocumentRead(BaseModel):
-    """What the api gives back for an uploaded document.
+    """What the api gives back for a stored document.
 
-    Metadata only: markdown_content would bloat every list response, and
-    minio_key is internal placement the client has no business knowing.
+    Metadata only: the content itself would bloat every list response.
     """
 
     #from_attributes so a sqlalchemy row can be returned directly
